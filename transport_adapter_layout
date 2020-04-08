@@ -1,0 +1,62 @@
+<!--<?xml version="1.0" encoding="utf-8"?>-->
+<!--<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"-->
+<!--    android:layout_width="match_parent"-->
+<!--    android:layout_height="match_parent" >-->
+
+<!--    <TextView-->
+<!--        android:id="@+id/tvName"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:text="Name"-->
+<!--        android:paddingRight="50dp"/>-->
+
+<!--    <TextView-->
+<!--        android:id="@+id/tvType"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:text="Type"-->
+<!--        android:textAlignment="center"-->
+<!--        android:paddingRight="50dp"/>-->
+
+<!--    <TextView-->
+<!--        android:id="@+id/tvDistance"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:text="Distance"-->
+<!--        android:paddingRight="50dp"/>-->
+<!--</LinearLayout>-->
+
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="10dp">
+
+    <TextView
+        android:id="@+id/tvName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:text="Name"
+        android:textColor="@android:color/black" />
+
+
+    <TextView
+        android:id="@+id/tvType"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/tvName"
+        android:layout_marginTop="5dp"
+        android:text="Type"
+        android:textColor="@android:color/black" />
+
+    <TextView
+        android:id="@+id/tvDistance"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/tvType"
+        android:layout_marginTop="5dp"
+        android:text="Distance"
+        android:textColor="@android:color/black"/>
+
+</RelativeLayout>
