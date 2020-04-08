@@ -1,0 +1,40 @@
+package com.example.androidtransportfinderassessment;
+
+import android.content.Context;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.TextView;
+
+import java.util.ArrayList;
+
+
+public class TransportAdapter extends ArrayAdapter<TransportInfo>
+{
+    public TransportAdapter(Context context, ArrayList<TransportInfo> transportList)
+    {
+        super(context,0, transportList);
+    }
+
+    @Override
+    public View getView(int position, View convertView, ViewGroup parent) {
+        // Get the data item for this position
+        TransportInfo transferInfo = getItem(position);
+        // Check if an existing view is being reused, otherwise inflate the view
+        if (convertView == null) {
+            convertView = LayoutInflater.from(getContext()).inflate(R.layout.transport_adapter_layout, parent, false);
+        }
+        // Lookup view for data population
+        TextView tvName = (TextView) convertView.findViewById(R.id.tvName);
+        TextView tvType = (TextView) convertView.findViewById(R.id.tvType);
+        TextView tvDistance = (TextView) convertView.findViewById(R.id.tvDistance);
+
+        // Populate the data into the template view using the data object
+        tvName.setText("Name: " + transferInfo.getName());
+        tvType.setText("Type: " + transferInfo.getType());
+        tvDistance.setText("Distance(m): " + transferInfo.getDistance());
+        // Return the completed view to render on screen
+        return convertView;
+    }
+}
