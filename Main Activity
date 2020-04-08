@@ -1,0 +1,276 @@
+package com.example.androidtransportfinderassessment;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import android.Manifest;
+
+import android.content.Context;
+import android.content.pm.PackageManager;
+import android.location.*;
+
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+
+import android.os.*;
+import android.util.Log;
+import android.util.Patterns;
+import android.view.View;
+import android.webkit.URLUtil;
+import android.widget.*;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+
+import java.util.ArrayList;
+
+
+public class MainActivity extends AppCompatActivity // implements LocationListener
+{
+    private LocationManager locationManager;
+    private LocationListener locationListener;
+    private static double latitude;
+    private static double longitude;
+
+    String[] requiredPermissions = {Manifest.permission.INTERNET,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION};
+
+    private RadioGroup radioTypeGroup;
+    private RadioButton radioTypeButton;
+    private Button searchButton;
+
+    URL url = new URL("http://10.0.2.2:8080/stations?latitude=");
+    public MainActivity() throws MalformedURLException {}
+
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState)
+    {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+        StrictMode.setThreadPolicy(policy);
+
+        boolean ok = true;
+        for (int i = 0; i < requiredPermissions.length; i++)
+        {
+            int result = ActivityCompat.checkSelfPermission(this, requiredPermissions[i]);
+            if (result != PackageManager.PERMISSION_GRANTED)
+            {
+                ok = false;
+            }
+
+            if (!ok)
+            {
+                ActivityCompat.requestPermissions(this, requiredPermissions, 1);
+                Toast.makeText(this, "One or more permissions have not been granted", Toast.LENGTH_LONG).show();
+            }
+            else
+                {
+                    LocationManager lm = (LocationManager) getSystemService(LOCATION_SERVICE);
+                    try
+                    {
+                        lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, new LocationListener() {
+                            @Override
+                            public void onLocationChanged(Location location)
+                            {
+                                longitude = location.getLongitude();
+                                latitude = location.getLongitude();
+
+                                radioTypeGroup = (RadioGroup) findViewById(R.id.type);
+                                searchButton = (Button) findViewById(R.id.search_button);
+
+                                searchButton.setOnClickListener(new View.OnClickListener()
+                                {
+                                    @Override
+                                    public void onClick(View v)
+                                    {
+                                        // get selected radio button from radioGroup
+                                        int selectedId = radioTypeGroup.getCheckedRadioButtonId();
+
+                                        // find the radiobutton by returned id
+                                        radioTypeButton = (RadioButton) findViewById(selectedId);
+
+                                        String strUrl = url.toString();
+                                        switch (radioTypeButton.getId())
+                                        {
+                                            case R.id.station:
+                                                strUrl += latitude + "&longitude=" + longitude + "&type=station";
+                                                try
+                                                {
+                                                    URL url = new URL(strUrl);
+                                                    task task = new task();
+                                                    task.execute(url.toString());
+                                                }
+                                                catch (MalformedURLException e) { e.printStackTrace(); }
+                                                break;
+                                            case R.id.airport:
+                                                strUrl += latitude + "&longitude=" + longitude + "&type=airport";
+                                                try
+                                                {
+                                                    URL url = new URL(strUrl);
+                                                    task task = new task();
+                                                    task.execute(url.toString());
+                                                }
+                                                catch (MalformedURLException e) { e.printStackTrace(); }
+                                            break;
+                                            case R.id.port:
+                                                strUrl += latitude + "&longitude=" + longitude + "&type=port";
+                                                try
+                                                {
+                                                    URL url = new URL(strUrl);
+                                                    task task = new task();
+                                                    task.execute(url.toString());
+                                                }
+                                                catch (MalformedURLException e) { e.printStackTrace(); }
+                                                break;
+                                            case R.id.all:
+                                                strUrl += latitude + "&longitude=" + longitude + "&type=all";
+                                                try
+                                                {
+                                                    URL url = new URL(strUrl);
+                                                    task task = new task();
+                                                    task.execute(url.toString());
+                                                }
+                                                catch (MalformedURLException e) { e.printStackTrace(); }
+                                                break;
+                                        }
+                                    }
+                                });
+                            }
+
+
+
+                            @Override
+                            public void onStatusChanged(String provider, int status, Bundle extras) {}
+
+                            @Override
+                            public void onProviderEnabled(String provider) {}
+
+                            @Override
+                            public void onProviderDisabled(String provider) {}
+                        })
+                    ;}
+                    catch (Exception e)
+                    {
+                        e.printStackTrace();
+                    }
+                }
+        }
+    }
+
+    public class task extends AsyncTask<String, Void, ArrayList<TransportInfo>> {
+        @Override
+        public ArrayList<TransportInfo> doInBackground(String... urls) {
+            ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+
+            ArrayList<String> listItems = new ArrayList<>();
+
+            StringBuffer sb = new StringBuffer();
+            for(int i = 0; i < urls.length; i++) {
+                sb.append(urls[i]);
+                //((TextView) findViewById(R.id.latTextView)).setText(sb);
+            }
+            String newUrl = sb.toString();
+            Log.i("doIt", "" + sb.toString());
+
+            ArrayList<TransportInfo> transportList = new ArrayList<>();
+
+            if (networkInfo != null && networkInfo.isConnected()) {
+                try {
+                    URL url = new URL(newUrl);
+                    //((TextView) findViewById(R.id.latTextView)).setText(newUrl);
+                    Log.i("still in?", "Yes");
+                    Boolean isValidURL = URLUtil.isValidUrl(url.toString()) && Patterns.WEB_URL.matcher(url.toString()).matches();
+                    Log.i("Valid url", ""+ isValidURL);
+                    //((TextView) findViewById(R.id.latTextView)).setText(isValidURL.toString());
+
+                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                    connection.setRequestMethod("GET");
+                    connection.setDoInput(true);
+                    int responseCode = connection.getResponseCode();
+                    Log.i("Code", "" + responseCode);
+                    if(responseCode == 200)
+                    {
+                        Log.i("Connection", "Yes");
+                    }
+                    else
+                    {
+                        Log.i("Connection", "No");
+                    }
+
+
+                    InputStreamReader reader = new InputStreamReader(connection.getInputStream());
+                    BufferedReader bufferedReader = new BufferedReader(reader);
+
+                    String line = "";
+
+                    while ((line = bufferedReader.readLine()) != null) {
+                        Log.i("line", line);
+
+                        JSONArray jsonArray = new JSONArray(line);
+                        for (int i = 0; i < jsonArray.length(); i++) {
+                            JSONObject jsonObject = (JSONObject) jsonArray.get(i);
+
+                             String name = jsonObject.getString("name");
+                             String type = jsonObject.getString("type");
+
+                            JSONObject jsonObject1 = (JSONObject) jsonArray.getJSONObject(i);
+                            JSONObject jsonObject2 = (JSONObject) jsonArray.getJSONObject(i).getJSONObject("location");
+
+                            Double Lat = Double.parseDouble((String) jsonObject2.get("latitude"));
+                            Double Long = Double.parseDouble((String) jsonObject2.get("longitude"));
+
+                            Location userLocation = new Location("User location");
+                            userLocation.setLatitude(latitude);
+                            userLocation.setLongitude(longitude);
+
+                            Location transportLocation = new Location("User location");
+                            transportLocation.setLatitude(Lat);
+                            transportLocation.setLongitude(Long);
+
+                            Double distance = Double.valueOf(Math.round(userLocation.distanceTo(transportLocation)));
+
+                            TransportInfo transportData = new TransportInfo(name,type,distance);
+                            transportList.add(transportData);
+                            Log.i("A", String.valueOf(transportList.size()));
+                        }
+                        reader.close();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+            return transportList;
+        }
+
+
+        @Override
+        protected void onPostExecute(ArrayList <TransportInfo> listItems)
+        {
+            ListView lv = findViewById(R.id.lv);
+
+            TransportAdapter adapter = new TransportAdapter(MainActivity.this, listItems);
+
+            lv.setAdapter(adapter);
+        }
+    }
+}
+
+
+
+
+
