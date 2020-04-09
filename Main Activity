@@ -2,16 +2,17 @@ package com.example.androidtransportfinderassessment;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import android.Manifest;
 
+import android.Manifest;
 import android.content.Context;
+
 import android.content.pm.PackageManager;
 import android.location.*;
 
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-
 import android.os.*;
+
 import android.util.Log;
 import android.util.Patterns;
 import android.view.View;
@@ -25,24 +26,37 @@ import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-
 import java.util.ArrayList;
 
+/**
+ * App displays name, type and distance to the 5 closest transport hubs that the user searches for.
+ *
+ * User can search for stations, airports, ports or a combination of all of these, if preferred.
+ *
+ * e.g. A user in Manchester, searching for Airports, will be shown the 5 closest airports
+ *      in and around Manchester.
+ *
+ * The app requires permissions to access the internet and monitor network connections,
+ * which are granted upon installation.
+ *
+ * It is also necessary for the app to track users' location; this is explicitly asked for
+ * when they begins using the app.
+ *
+ * @author Sayed Korim
+ *         MMU ID: 18027683
+ */
 
-public class MainActivity extends AppCompatActivity // implements LocationListener
+public class MainActivity extends AppCompatActivity
 {
-    private LocationManager locationManager;
-    private LocationListener locationListener;
     private static double latitude;
     private static double longitude;
 
     String[] requiredPermissions = {Manifest.permission.INTERNET,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION};
+                                    Manifest.permission.ACCESS_FINE_LOCATION,
+                                    Manifest.permission.ACCESS_COARSE_LOCATION};
 
     private RadioGroup radioTypeGroup;
     private RadioButton radioTypeButton;
@@ -51,15 +65,28 @@ public class MainActivity extends AppCompatActivity // implements LocationListen
     URL url = new URL("http://10.0.2.2:8080/stations?latitude=");
     public MainActivity() throws MalformedURLException {}
 
-
+    /**
+     * Checks that the required authorisations have been granted.
+     *
+     * If granted, user's location (latitude and longitude) is retrieved
+     * and assigned into the corresponding variables.
+     *
+     * When the search button is clicked, the url (which is used to contact the server)
+     * is built by appending the user's location and search type onto it.
+     *
+     * The search type is specified via the user clicking on one of 4 radio buttons:
+     * 1. Station    2. Airport    3. Port    4. All
+     *
+     * Once built, the url is passed to the AsyncTask, as a String,
+     * where it's used to retrieve data from the server.
+     *
+     * @param savedInstanceState default parameter passed during application build
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
-        StrictMode.setThreadPolicy(policy);
 
         boolean ok = true;
         for (int i = 0; i < requiredPermissions.length; i++)
@@ -80,26 +107,25 @@ public class MainActivity extends AppCompatActivity // implements LocationListen
                     LocationManager lm = (LocationManager) getSystemService(LOCATION_SERVICE);
                     try
                     {
-                        lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, new LocationListener() {
+                        lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, new LocationListener()
+                        {
                             @Override
                             public void onLocationChanged(Location location)
                             {
                                 longitude = location.getLongitude();
-                                latitude = location.getLongitude();
+                                latitude = location.getLatitude();
 
-                                radioTypeGroup = (RadioGroup) findViewById(R.id.type);
-                                searchButton = (Button) findViewById(R.id.search_button);
+                                radioTypeGroup = findViewById(R.id.type);
+                                searchButton = findViewById(R.id.search_button);
 
                                 searchButton.setOnClickListener(new View.OnClickListener()
                                 {
                                     @Override
                                     public void onClick(View v)
                                     {
-                                        // get selected radio button from radioGroup
-                                        int selectedId = radioTypeGroup.getCheckedRadioButtonId();
+                                       int selectedId = radioTypeGroup.getCheckedRadioButtonId();
 
-                                        // find the radiobutton by returned id
-                                        radioTypeButton = (RadioButton) findViewById(selectedId);
+                                        radioTypeButton = findViewById(selectedId);
 
                                         String strUrl = url.toString();
                                         switch (radioTypeButton.getId())
@@ -114,6 +140,7 @@ public class MainActivity extends AppCompatActivity // implements LocationListen
                                                 }
                                                 catch (MalformedURLException e) { e.printStackTrace(); }
                                                 break;
+
                                             case R.id.airport:
                                                 strUrl += latitude + "&longitude=" + longitude + "&type=airport";
                                                 try
@@ -124,6 +151,7 @@ public class MainActivity extends AppCompatActivity // implements LocationListen
                                                 }
                                                 catch (MalformedURLException e) { e.printStackTrace(); }
                                             break;
+
                                             case R.id.port:
                                                 strUrl += latitude + "&longitude=" + longitude + "&type=port";
                                                 try
@@ -134,6 +162,7 @@ public class MainActivity extends AppCompatActivity // implements LocationListen
                                                 }
                                                 catch (MalformedURLException e) { e.printStackTrace(); }
                                                 break;
+
                                             case R.id.all:
                                                 strUrl += latitude + "&longitude=" + longitude + "&type=all";
                                                 try
@@ -148,8 +177,6 @@ public class MainActivity extends AppCompatActivity // implements LocationListen
                                     }
                                 });
                             }
-
-
 
                             @Override
                             public void onStatusChanged(String provider, int status, Bundle extras) {}
@@ -169,45 +196,82 @@ public class MainActivity extends AppCompatActivity // implements LocationListen
         }
     }
 
-    public class task extends AsyncTask<String, Void, ArrayList<TransportInfo>> {
+    /**
+     * Is passed url as a vararg string.
+     * Url is retrieved from the vararg and converted from string into the URL type.
+     *
+     * Server is contacted and, if open, the Json from it is retrieved and parsed.
+     *
+     * A TransportInfo object is created for each of the 5 transport hubs.
+     * These objects are stored in an ArrayList which is used by the TransportAdapter
+     * to populate the list view which is shown to the user.
+     *
+     */
+    public class task extends AsyncTask<String, Void, ArrayList<TransportInfo>>
+    {
+        /**
+         * Takes the String vararg passed to it and extracts the url from it.
+         *
+         * Url is converted from type String to type URL
+         * and is used to contact the server.
+         *
+         * The Json data returned by the server is parsed in order to
+         * retrieve the name and type of each transport hub.
+         *
+         * Two location objects are created- one storing the users location;
+         *                                   the other stores the transport hub's location.
+         *
+         * The distance between these two locations are calculated and (along with the name and type)
+         * are stored in an object of type TransportInfo.
+         *
+         * This is done for each of the 5 transport hubs and is then stored in an ArrayList.
+         * The ArrayList is passed to the postExecute method to be used in order to populate the listView.
+         *
+         * @param urls the url to contact the server with.
+         *             Must be extracted from string vararg to single string,
+         *             then converted to URL type.
+         *
+         * @return ArrayList of TransportInfo objects to be passed to onPostExecute.
+         */
         @Override
-        public ArrayList<TransportInfo> doInBackground(String... urls) {
+        public ArrayList<TransportInfo> doInBackground(String... urls)
+        {
             ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
             NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
 
-            ArrayList<String> listItems = new ArrayList<>();
-
+            // Convert vararg strings to a single string (storing the url)
             StringBuffer sb = new StringBuffer();
-            for(int i = 0; i < urls.length; i++) {
-                sb.append(urls[i]);
-                //((TextView) findViewById(R.id.latTextView)).setText(sb);
+            for(int i = 0; i < urls.length; i++)
+            {
+                sb.append(urls[0]);
             }
             String newUrl = sb.toString();
-            Log.i("doIt", "" + sb.toString());
 
             ArrayList<TransportInfo> transportList = new ArrayList<>();
 
-            if (networkInfo != null && networkInfo.isConnected()) {
-                try {
+            if (networkInfo != null && networkInfo.isConnected())
+            {
+                try
+                {
                     URL url = new URL(newUrl);
-                    //((TextView) findViewById(R.id.latTextView)).setText(newUrl);
-                    Log.i("still in?", "Yes");
+
+                    //Check if url is valid
                     Boolean isValidURL = URLUtil.isValidUrl(url.toString()) && Patterns.WEB_URL.matcher(url.toString()).matches();
                     Log.i("Valid url", ""+ isValidURL);
-                    //((TextView) findViewById(R.id.latTextView)).setText(isValidURL.toString());
+
 
                     HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                    connection.setRequestMethod("GET");
-                    connection.setDoInput(true);
+
                     int responseCode = connection.getResponseCode();
-                    Log.i("Code", "" + responseCode);
+
+                    //Connection check
                     if(responseCode == 200)
                     {
-                        Log.i("Connection", "Yes");
+                        Log.d("Connection?", "Yes");
                     }
                     else
                     {
-                        Log.i("Connection", "No");
+                        Log.d("Connection?", "No");
                     }
 
 
@@ -216,21 +280,20 @@ public class MainActivity extends AppCompatActivity // implements LocationListen
 
                     String line = "";
 
-                    while ((line = bufferedReader.readLine()) != null) {
-                        Log.i("line", line);
-
+                    while ((line = bufferedReader.readLine()) != null)
+                    {
                         JSONArray jsonArray = new JSONArray(line);
-                        for (int i = 0; i < jsonArray.length(); i++) {
+                        for (int i = 0; i < jsonArray.length(); i++)
+                        {
                             JSONObject jsonObject = (JSONObject) jsonArray.get(i);
 
-                             String name = jsonObject.getString("name");
-                             String type = jsonObject.getString("type");
+                            String name = jsonObject.getString("name");
+                            String type = jsonObject.getString("type");
 
-                            JSONObject jsonObject1 = (JSONObject) jsonArray.getJSONObject(i);
-                            JSONObject jsonObject2 = (JSONObject) jsonArray.getJSONObject(i).getJSONObject("location");
+                            JSONObject locationObject = (JSONObject) jsonArray.getJSONObject(i).getJSONObject("location");
 
-                            Double Lat = Double.parseDouble((String) jsonObject2.get("latitude"));
-                            Double Long = Double.parseDouble((String) jsonObject2.get("longitude"));
+                            Double Lat = Double.parseDouble((String) locationObject.get("latitude"));
+                            Double Long = Double.parseDouble((String) locationObject.get("longitude"));
 
                             Location userLocation = new Location("User location");
                             userLocation.setLatitude(latitude);
@@ -241,23 +304,24 @@ public class MainActivity extends AppCompatActivity // implements LocationListen
                             transportLocation.setLongitude(Long);
 
                             Double distance = Double.valueOf(Math.round(userLocation.distanceTo(transportLocation)));
-
                             TransportInfo transportData = new TransportInfo(name,type,distance);
                             transportList.add(transportData);
-                            Log.i("A", String.valueOf(transportList.size()));
                         }
                         reader.close();
+                        connection.disconnect();
                     }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+                } catch (IOException | JSONException e) { e.printStackTrace(); }
             }
             return transportList;
         }
 
-
+        /**
+         * Takes the TransportInfo arrayList from doInBackground
+         * and populates listView with it's data using a custom Adapter
+         * (TransprtAdapter).
+         *
+         * @param listItems fetched arrayList from doInBacground.
+         */
         @Override
         protected void onPostExecute(ArrayList <TransportInfo> listItems)
         {
