@@ -9,31 +9,49 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 
-
+/**
+ * Adapter class to populate listView with TransportInfo data
+ */
 public class TransportAdapter extends ArrayAdapter<TransportInfo>
 {
+    /**
+     * Constructor to initialise TransportAdapter
+     *
+     * @param context requires context to be provided
+     * @param transportList ArrayList of TransportInfo objects
+     */
     public TransportAdapter(Context context, ArrayList<TransportInfo> transportList)
     {
         super(context,0, transportList);
     }
 
+    /**
+     * View setup is defined here
+     *
+     * @param position position of data to be displayed within the data set.
+     * @param convertView recycles old view objects that aren't being used.
+     * @param parent containing adapter for the view.
+     * @return
+     */
     @Override
-    public View getView(int position, View convertView, ViewGroup parent) {
+    public View getView(int position, View convertView, ViewGroup parent)
+    {
         // Get the data item for this position
         TransportInfo transferInfo = getItem(position);
         // Check if an existing view is being reused, otherwise inflate the view
-        if (convertView == null) {
+        if (convertView == null)
+        {
             convertView = LayoutInflater.from(getContext()).inflate(R.layout.transport_adapter_layout, parent, false);
         }
         // Lookup view for data population
-        TextView tvName = (TextView) convertView.findViewById(R.id.tvName);
-        TextView tvType = (TextView) convertView.findViewById(R.id.tvType);
-        TextView tvDistance = (TextView) convertView.findViewById(R.id.tvDistance);
+        TextView tvName = convertView.findViewById(R.id.tvName);
+        TextView tvType = convertView.findViewById(R.id.tvType);
+        TextView tvDistance = convertView.findViewById(R.id.tvDistance);
 
         // Populate the data into the template view using the data object
-        tvName.setText("Name: " + transferInfo.getName());
-        tvType.setText("Type: " + transferInfo.getType());
-        tvDistance.setText("Distance(m): " + transferInfo.getDistance());
+        tvName.setText("Name: " + transferInfo.name);
+        tvType.setText("Type: " + transferInfo.type);
+        tvDistance.setText("Distance(m): " + transferInfo.distance);
         // Return the completed view to render on screen
         return convertView;
     }
